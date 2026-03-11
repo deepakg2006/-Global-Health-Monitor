@@ -13,7 +13,10 @@ import json
 import google.generativeai as genai
 
 # Configure Gemini API
-genai.configure(api_key="AIzaSyBa1LTZU9icjxnf9pmQWTAoBHnStzlD830")
+api_key = os.environ.get("GEMINI_API_KEY")
+if not api_key:
+    print("⚠ GEMINI_API_KEY environment variable not set. Gemini features will not work.")
+genai.configure(api_key=api_key)
 generation_config = {
   "temperature": 0.7,
   "top_p": 0.95,
