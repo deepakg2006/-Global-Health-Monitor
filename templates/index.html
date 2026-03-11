@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Advanced disease analysis and forecasting platform using machine learning for public health insights">
+    <title>Global Health Monitor - Disease Analysis & Forecasting</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">🏥</div>
+                <div class="logo-text">
+                    <h1>Global Health Monitor</h1>
+                    <p>AI-Powered Disease Analytics</p>
+                </div>
+            </div>
+            <div class="header-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Cases</span>
+                        <span class="stat-value" id="total-cases">Loading...</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🌍</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Active Regions</span>
+                        <span class="stat-value" id="active-regions">-</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🦠</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Tracked Diseases</span>
+                        <span class="stat-value" id="tracked-diseases">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dashboard -->
+    <main class="dashboard">
+        <!-- Section 1: Overview -->
+        <section class="section-overview">
+            <div class="glass-card large">
+                <div class="card-header">
+                    <h2>📈 Global Disease Trends (Last 90 Days)</h2>
+                    <div class="card-actions">
+                        <button class="btn-icon" id="refresh-data" title="Refresh Data">🔄</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="trend-chart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Regional & Disease Distribution -->
+        <section class="section-distribution">
+            <div class="glass-card">
+                <div class="card-header">
+                    <h2>🌍 Regional Distribution</h2>
+                </div>
+                <div class="card-body">
+                    <canvas id="regional-chart"></canvas>
+                </div>
+            </div>
+            
+            <div class="glass-card">
+                <div class="card-header">
+                    <h2>🦠 Disease Distribution</h2>
+                </div>
+                <div class="card-body">
+                    <canvas id="disease-chart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Predictive Analytics -->
+        <section class="section-prediction">
+            <div class="glass-card prediction-panel">
+                <div class="card-header">
+                    <h2>🔮 Predictive Analytics</h2>
+                    <p class="subtitle">AI-powered forecasting using environmental data</p>
+                </div>
+                <div class="card-body">
+                    <div class="prediction-controls">
+                        <div class="control-group">
+                            <label for="pred-region">Region</label>
+                            <select id="pred-region" class="input-field">
+                                <option value="Asia">Asia</option>
+                                <option value="Africa">Africa</option>
+                                <option value="Europe">Europe</option>
+                                <option value="North America">North America</option>
+                                <option value="South America">South America</option>
+                                <option value="Oceania">Oceania</option>
+                                <option value="Middle East">Middle East</option>
+                                <option value="Southeast Asia">Southeast Asia</option>
+                            </select>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="pred-disease">Disease</label>
+                            <select id="pred-disease" class="input-field">
+                                <option value="Dengue">Dengue</option>
+                                <option value="Malaria">Malaria</option>
+                                <option value="Influenza">Influenza</option>
+                                <option value="COVID-19">COVID-19</option>
+                                <option value="Cholera">Cholera</option>
+                                <option value="Tuberculosis">Tuberculosis</option>
+                                <option value="Measles">Measles</option>
+                                <option value="Typhoid">Typhoid</option>
+                            </select>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="pred-temp">Temperature (°C)</label>
+                            <input type="number" id="pred-temp" class="input-field" value="28" min="0" max="50" step="0.5">
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="pred-rain">Rainfall (mm)</label>
+                            <input type="number" id="pred-rain" class="input-field" value="150" min="0" max="500" step="10">
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="pred-humidity">Humidity (%)</label>
+                            <input type="number" id="pred-humidity" class="input-field" value="70" min="0" max="100" step="5">
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="pred-density">Population Density</label>
+                            <select id="pred-density" class="input-field">
+                                <option value="50">Rural (50/km²)</option>
+                                <option value="150">Small Town (150/km²)</option>
+                                <option value="300">Town (300/km²)</option>
+                                <option value="500">Small City (500/km²)</option>
+                                <option value="1000" selected>City (1000/km²)</option>
+                                <option value="2000">Large City (2000/km²)</option>
+                                <option value="5000">Megacity (5000/km²)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="pred-days">Forecast Days</label>
+                            <input type="number" id="pred-days" class="input-field" value="30" min="7" max="90" step="1">
+                        </div>
+                        
+                        <div class="control-group full-width">
+                            <button id="predict-btn" class="btn-primary">
+                                <span class="btn-icon">🚀</span>
+                                Generate Forecast
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="prediction-result" id="prediction-result" style="display: none;">
+                        <h3>Forecast Results</h3>
+                        <canvas id="prediction-chart"></canvas>
+                        <div class="prediction-summary" id="prediction-summary"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Disease Timeline -->
+        <section class="section-timeline">
+            <div class="glass-card large">
+                <div class="card-header">
+                    <h2>📅 Disease Timeline (Last 30 Days)</h2>
+                </div>
+                <div class="card-body">
+                    <canvas id="timeline-chart"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>© 2026 Global Health Monitor | Powered by Machine Learning & Real-time Analytics</p>
+        <p class="footer-note">Data is synthetic and for demonstration purposes only</p>
+    </footer>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner"></div>
+        <p>Loading health data...</p>
+    </div>
+
+    <!-- Chatbot Widget -->
+    <div class="chatbot-widget" id="chatbot-widget">
+        <div class="chat-header" id="chat-header">
+            <h3>🤖 Analytics Assistant</h3>
+            <button id="close-chat" class="btn-icon">✖</button>
+        </div>
+        <div class="chat-body" id="chat-body">
+            <div class="message bot-message">
+                Hello! I can explain the dashboard data for you. What would you like to know?
+            </div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" class="input-field" placeholder="Ask about the data...">
+            <button id="send-chat" class="btn-primary" style="padding: 0.5rem 1rem;">Send</button>
+        </div>
+    </div>
+    <button id="open-chat" class="chat-fab">💬</button>
+
+    <!-- Custom JavaScript -->
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
