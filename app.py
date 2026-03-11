@@ -7,7 +7,7 @@ from flask_cors import CORS
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-# from ml_engine import DiseaseForecaster
+from ml_engine import DiseaseForecaster
 import os
 import json
 import google.generativeai as genai
@@ -32,8 +32,18 @@ gemini_model = genai.GenerativeModel(
 app = Flask(__name__)
 CORS(app)
 
-# Load data on startup
+# Initialize ML model
+forecaster = DiseaseForecaster()
+
+# Load data and model on startup
 DATA_FILE = 'disease_data.csv'
+MODEL_FILE = 'disease_model.pkl'
+
+if os.path.exists(MODEL_FILE):
+    forecaster.load_model(MODEL_FILE)
+    print("✓ Model loaded successfully")
+else:
+    print("⚠ Model not found. Please train the model first.")
 
 if os.path.exists(DATA_FILE):
     df_global = pd.read_csv(DATA_FILE)
@@ -117,60 +127,95 @@ def predict():
         predictions = []
         base_date = datetime.now()
         
-        prompt = f"""
-        You are an AI specialized in epidemiological forecasting.
-        Provide a daily predicted case count for {disease} in {region} over the next {days_ahead} days.
-        Current conditions:
-        - Temperature: {temperature} C
-        - Rainfall: {rainfall} mm
-        - Humidity: {humidity} %
-        - Population Density: {population_density} person/sq.km
-        
-        Output a JSON array of {days_ahead} integers representing predicted cases for each day.
-        Example format: [15, 18, 20, 16]
-        Make sure the output strictly follows the schema. Ensure there are exactly {days_ahead} numbers in the array.
-        """
-        
-        response = gemini_model.generate_content(prompt)
-        
-        # Clean potential markdown formatting
-        raw_text = response.text.strip()
-        if raw_text.startswith("```json"):
-            raw_text = raw_text[7:]
-        elif raw_text.startswith("```"):
-            raw_text = raw_text[3:]
-        if raw_text.endswith("```"):
-            raw_text = raw_text[:-3]
+        use_gemini = True
+        if not api_key:
+            use_gemini = False
             
-        try:
-            predicted_cases_list = json.loads(raw_text.strip())
-        except Exception as json_err:
-            print(f"JSON Parsing Error: {json_err}. Raw string: {response.text}")
-            predicted_cases_list = [10] * days_ahead # Fallback value
-        
-        if not isinstance(predicted_cases_list, list):
-            predicted_cases_list = [10] * days_ahead # Fallback
-            
-        if len(predicted_cases_list) != days_ahead:
-            # extend or truncate if lengths don't match exactly
-            if len(predicted_cases_list) == 0:
-                predicted_cases_list = [10] * days_ahead
-            predicted_cases_list = (predicted_cases_list * (days_ahead // len(predicted_cases_list) + 1))[:days_ahead]
+        if use_gemini:
+            try:
+                prompt = f"""
+                You are an AI specialized in epidemiological forecasting.
+                Provide a daily predicted case count for {disease} in {region} over the next {days_ahead} days.
+                Current conditions:
+                - Temperature: {temperature} C
+                - Rainfall: {rainfall} mm
+                - Humidity: {humidity} %
+                - Population Density: {population_density} person/sq.km
+                
+                Output a JSON array of {days_ahead} integers representing predicted cases for each day.
+                Example format: [15, 18, 20, 16]
+                Make sure the output strictly follows the schema. Ensure there are exactly {days_ahead} numbers in the array.
+                """
+                
+                response = gemini_model.generate_content(prompt)
+                
+                # Clean potential markdown formatting
+                raw_text = response.text.strip()
+                if raw_text.startswith("```json"):
+                    raw_text = raw_text[7:]
+                elif raw_text.startswith("```"):
+                    raw_text = raw_text[3:]
+                if raw_text.endswith("```"):
+                    raw_text = raw_text[:-3]
+                    
+                predicted_cases_list = json.loads(raw_text.strip())
+                
+                if not isinstance(predicted_cases_list, list):
+                    predicted_cases_list = [10] * days_ahead # Fallback
+                    
+                if len(predicted_cases_list) != days_ahead:
+                    if len(predicted_cases_list) == 0:
+                        predicted_cases_list = [10] * days_ahead
+                    predicted_cases_list = (predicted_cases_list * (days_ahead // len(predicted_cases_list) + 1))[:days_ahead]
 
-        for day in range(days_ahead):
-            pred_date = base_date + timedelta(days=day)
-            
-            # Add some variation to environmental factors
-            temp_var = temperature + np.random.normal(0, 2)
-            rain_var = max(0, rainfall + np.random.normal(0, 20))
-            humid_var = max(40, min(90, humidity + np.random.normal(0, 3)))
-            
-            predictions.append({
-                'date': pred_date.strftime('%Y-%m-%d'),
-                'predicted_cases': int(predicted_cases_list[day]),
-                'temperature': round(temp_var, 2),
-                'rainfall': round(rain_var, 2)
-            })
+                for day in range(days_ahead):
+                    pred_date = base_date + timedelta(days=day)
+                    
+                    # Add some variation to environmental factors
+                    temp_var = temperature + np.random.normal(0, 2)
+                    rain_var = max(0, rainfall + np.random.normal(0, 20))
+                    humid_var = max(40, min(90, humidity + np.random.normal(0, 3)))
+                    
+                    predictions.append({
+                        'date': pred_date.strftime('%Y-%m-%d'),
+                        'predicted_cases': int(predicted_cases_list[day]),
+                        'temperature': round(temp_var, 2),
+                        'rainfall': round(rain_var, 2)
+                    })
+            except Exception as e:
+                print(f"Gemini API predict failed: {e}. Falling back to local model.")
+                use_gemini = False  # Trigger fallback
+                predictions = []    # clear any partial predictions
+                
+        if not use_gemini:
+            # Fallback to local model
+            if not forecaster.is_trained:
+                raise ValueError("Local ML Model is not trained and Gemini API is unavailable.")
+                
+            for day in range(days_ahead):
+                pred_date = base_date + timedelta(days=day)
+                
+                # Add some variation to environmental factors
+                temp_var = temperature + np.random.normal(0, 2)
+                rain_var = max(0, rainfall + np.random.normal(0, 20))
+                humid_var = max(40, min(90, humidity + np.random.normal(0, 3)))
+                
+                predicted_cases = forecaster.predict(
+                    region=region,
+                    disease=disease,
+                    temperature=temp_var,
+                    rainfall=rain_var,
+                    humidity=humid_var,
+                    population_density=population_density,
+                    date=pred_date.strftime('%Y-%m-%d')
+                )
+                
+                predictions.append({
+                    'date': pred_date.strftime('%Y-%m-%d'),
+                    'predicted_cases': predicted_cases,
+                    'temperature': round(temp_var, 2),
+                    'rainfall': round(rain_var, 2)
+                })
         
         return jsonify({
             'predictions': predictions,
@@ -213,6 +258,11 @@ def chat():
         user_message = data.get('message', '')
         context_data = data.get('context', {})
         
+        if not api_key:
+            return jsonify({
+                'response': "Hello! I am the AI Assistant. Currently, my advanced chat features are unavailable because the API key is not configured. However, you can still use the Dashboard and Predictions, which will automatically fall back to our local Machine Learning model!"
+            })
+
         # Prepare a context-aware prompt using dashboard stats
         prompt = f"""
 You are an expert epidemiological data analyst assistant integrated into the "Global Health Monitor" dashboard.
@@ -235,7 +285,7 @@ Provide a concise, helpful, and analytical response. Format your response in pla
             'response': response.text
         })
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        return jsonify({'response': f"The AI Chatbot encountered an error: {str(e)}. Please check your API settings."})
 
 if __name__ == '__main__':
     print("\n" + "="*60)
