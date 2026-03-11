@@ -129,7 +129,21 @@ def predict():
         """
         
         response = gemini_model.generate_content(prompt)
-        predicted_cases_list = json.loads(response.text)
+        
+        # Clean potential markdown formatting
+        raw_text = response.text.strip()
+        if raw_text.startswith("```json"):
+            raw_text = raw_text[7:]
+        elif raw_text.startswith("```"):
+            raw_text = raw_text[3:]
+        if raw_text.endswith("```"):
+            raw_text = raw_text[:-3]
+            
+        try:
+            predicted_cases_list = json.loads(raw_text.strip())
+        except Exception as json_err:
+            print(f"JSON Parsing Error: {json_err}. Raw string: {response.text}")
+            predicted_cases_list = [10] * days_ahead # Fallback value
         
         if not isinstance(predicted_cases_list, list):
             predicted_cases_list = [10] * days_ahead # Fallback

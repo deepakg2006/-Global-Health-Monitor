@@ -400,7 +400,14 @@ async function generatePrediction() {
             })
         });
         
-        if (!response.ok) throw new Error('Prediction failed');
+        if (!response.ok) {
+            let errorMsg = 'Prediction failed';
+            try {
+                const errData = await response.json();
+                if (errData.error) errorMsg = errData.error;
+            } catch(e) {}
+            throw new Error(errorMsg);
+        }
         
         const result = await response.json();
         
@@ -414,7 +421,7 @@ async function generatePrediction() {
         console.log('✓ Prediction generated successfully');
     } catch (error) {
         console.error('Error generating prediction:', error);
-        alert('Failed to generate prediction. Please try again.');
+        alert(`Failed to generate prediction. Server says: ${error.message}`);
         
         const btn = document.getElementById('predict-btn');
         btn.innerHTML = '<span class="btn-icon">🚀</span> Generate Forecast';
