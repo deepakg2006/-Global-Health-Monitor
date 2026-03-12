@@ -63,11 +63,13 @@ function updateStatistics(stats) {
  */
 function renderTrendChart(data) {
     const ctx = document.getElementById('trend-chart');
+    const typeElement = document.getElementById('trend-chart-type');
+    const chartType = typeElement ? typeElement.value : 'line';
     
     if (charts.trend) charts.trend.destroy();
     
     charts.trend = new Chart(ctx, {
-        type: 'line',
+        type: chartType,
         data: {
             labels: data.map(d => formatDate(d.Date)),
             datasets: [{
@@ -139,6 +141,8 @@ function renderTrendChart(data) {
  */
 function renderRegionalChart(data) {
     const ctx = document.getElementById('regional-chart');
+    const typeElement = document.getElementById('regional-chart-type');
+    const chartType = typeElement ? typeElement.value : 'bar';
     
     if (charts.regional) charts.regional.destroy();
     
@@ -147,8 +151,42 @@ function renderRegionalChart(data) {
         '#4facfe', '#00f2fe', '#43e97b', '#38f9d7'
     ];
     
+    const options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: chartType === 'pie' || chartType === 'doughnut'
+            },
+            tooltip: {
+                backgroundColor: 'rgba(10, 14, 39, 0.9)',
+                titleColor: '#00f2fe',
+                bodyColor: '#b8c1ec',
+                borderColor: '#00f2fe',
+                borderWidth: 1,
+                padding: 12,
+                callbacks: {
+                    label: (context) => `Cases: ${formatNumber(context.parsed.y !== undefined ? context.parsed.y : context.parsed)}`
+                }
+            }
+        }
+    };
+    
+    if (chartType === 'bar' || chartType === 'line') {
+        options.scales = {
+            x: {
+                grid: { display: false },
+                ticks: { maxRotation: 45, minRotation: 45 }
+            },
+            y: {
+                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                ticks: { callback: (value) => formatNumber(value) }
+            }
+        };
+    }
+
     charts.regional = new Chart(ctx, {
-        type: 'bar',
+        type: chartType,
         data: {
             labels: data.map(d => d.Region),
             datasets: [{
@@ -157,49 +195,11 @@ function renderRegionalChart(data) {
                 backgroundColor: colors,
                 borderColor: colors.map(c => c + '80'),
                 borderWidth: 2,
-                borderRadius: 8,
+                borderRadius: chartType === 'bar' ? 8 : 0,
                 hoverBackgroundColor: colors.map(c => c + 'cc')
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(10, 14, 39, 0.9)',
-                    titleColor: '#00f2fe',
-                    bodyColor: '#b8c1ec',
-                    borderColor: '#00f2fe',
-                    borderWidth: 1,
-                    padding: 12,
-                    callbacks: {
-                        label: (context) => `Cases: ${formatNumber(context.parsed.y)}`
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        maxRotation: 45,
-                        minRotation: 45
-                    }
-                },
-                y: {
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.05)'
-                    },
-                    ticks: {
-                        callback: (value) => formatNumber(value)
-                    }
-                }
-            }
-        }
+        options: options
     });
 }
 
@@ -208,6 +208,8 @@ function renderRegionalChart(data) {
  */
 function renderDiseaseChart(data) {
     const ctx = document.getElementById('disease-chart');
+    const typeElement = document.getElementById('disease-chart-type');
+    const chartType = typeElement ? typeElement.value : 'doughnut';
     
     if (charts.disease) charts.disease.destroy();
     
@@ -216,52 +218,72 @@ function renderDiseaseChart(data) {
         '#4facfe', '#00f2fe', '#43e97b', '#38f9d7'
     ];
     
-    charts.disease = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: data.map(d => d.Disease),
-            datasets: [{
-                data: data.map(d => d.Case_Count),
-                backgroundColor: colors,
-                borderColor: '#0a0e27',
-                borderWidth: 3,
-                hoverOffset: 15
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: {
-                        padding: 15,
-                        font: {
-                            size: 12
-                        },
-                        usePointStyle: true,
-                        pointStyle: 'circle'
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(10, 14, 39, 0.9)',
-                    titleColor: '#00f2fe',
-                    bodyColor: '#b8c1ec',
-                    borderColor: '#00f2fe',
-                    borderWidth: 1,
-                    padding: 12,
-                    callbacks: {
-                        label: (context) => {
-                            const label = context.label || '';
-                            const value = formatNumber(context.parsed);
+    const options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: chartType === 'pie' || chartType === 'doughnut' ? 'right' : 'top',
+                display: true,
+                labels: {
+                    padding: 15,
+                    font: { size: 12 },
+                    usePointStyle: true,
+                    pointStyle: 'circle'
+                }
+            },
+            tooltip: {
+                backgroundColor: 'rgba(10, 14, 39, 0.9)',
+                titleColor: '#00f2fe',
+                bodyColor: '#b8c1ec',
+                borderColor: '#00f2fe',
+                borderWidth: 1,
+                padding: 12,
+                callbacks: {
+                    label: (context) => {
+                        const label = context.dataset.label || context.label || '';
+                        const parsedValue = context.parsed.y !== undefined ? context.parsed.y : context.parsed;
+                        const value = formatNumber(parsedValue);
+                        if (chartType === 'pie' || chartType === 'doughnut') {
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            const percentage = ((parsedValue / total) * 100).toFixed(1);
                             return `${label}: ${value} (${percentage}%)`;
                         }
+                        return `${label}: ${value}`;
                     }
                 }
             }
         }
+    };
+
+    if (chartType === 'bar' || chartType === 'line') {
+        options.scales = {
+            x: {
+                grid: { display: false },
+                ticks: { maxRotation: 45, minRotation: 45 }
+            },
+            y: {
+                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                ticks: { callback: (value) => formatNumber(value) }
+            }
+        };
+    }
+    
+    charts.disease = new Chart(ctx, {
+        type: chartType,
+        data: {
+            labels: data.map(d => d.Disease),
+            datasets: [{
+                label: 'Disease Cases',
+                data: data.map(d => d.Case_Count),
+                backgroundColor: colors,
+                borderColor: chartType === 'pie' || chartType === 'doughnut' ? '#0a0e27' : colors.map(c => c + '80'),
+                borderWidth: chartType === 'pie' || chartType === 'doughnut' ? 3 : 2,
+                borderRadius: chartType === 'bar' ? 8 : 0,
+                hoverOffset: chartType === 'pie' || chartType === 'doughnut' ? 15 : 0
+            }]
+        },
+        options: options
     });
 }
 
@@ -270,6 +292,8 @@ function renderDiseaseChart(data) {
  */
 function renderTimelineChart(data) {
     const ctx = document.getElementById('timeline-chart');
+    const typeElement = document.getElementById('timeline-chart-type');
+    const chartType = typeElement ? typeElement.value : 'line';
     
     if (charts.timeline) charts.timeline.destroy();
     
@@ -302,7 +326,7 @@ function renderTimelineChart(data) {
             label: disease,
             data: dates.map(date => dataMap[date] || 0),
             borderColor: colors[index % colors.length],
-            backgroundColor: colors[index % colors.length] + '20',
+            backgroundColor: chartType === 'bar' ? colors[index % colors.length] + '80' : colors[index % colors.length] + '20',
             borderWidth: 2,
             fill: false,
             tension: 0.4,
@@ -312,7 +336,7 @@ function renderTimelineChart(data) {
     });
     
     charts.timeline = new Chart(ctx, {
-        type: 'line',
+        type: chartType,
         data: {
             labels: dates.map(d => formatDate(d)),
             datasets: datasets
@@ -550,6 +574,88 @@ function setupEventListeners() {
     document.getElementById('predict-btn').addEventListener('click', () => {
         generatePrediction();
     });
+
+    // Chart type selectors
+    document.getElementById('trend-chart-type')?.addEventListener('change', () => {
+        if (currentData) renderTrendChart(currentData.daily_trend);
+    });
+    document.getElementById('regional-chart-type')?.addEventListener('change', () => {
+        if (currentData) renderRegionalChart(currentData.regional_distribution);
+    });
+    document.getElementById('disease-chart-type')?.addEventListener('change', () => {
+        if (currentData) renderDiseaseChart(currentData.disease_distribution);
+    });
+    document.getElementById('timeline-chart-type')?.addEventListener('change', () => {
+        if (currentData) renderTimelineChart(currentData.disease_trends);
+    });
+
+    // PDF Download
+    const downloadBtn = document.getElementById('download-pdf-btn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', () => {
+            const originalText = downloadBtn.innerHTML;
+            downloadBtn.innerHTML = '<span class="btn-icon">⏳</span> Downloading...';
+            downloadBtn.disabled = true;
+
+            const element = document.body;
+            
+            const opt = {
+                margin:       [0.2, 0.2],
+                filename:     `Regional_Health_Analysis_Report_${new Date().toISOString().split('T')[0]}.pdf`,
+                image:        { type: 'jpeg', quality: 1.0 },
+                html2canvas:  { 
+                    scale: 2, 
+                    useCORS: true, 
+                    backgroundColor: '#0a0e27',
+                    windowWidth: 1600,
+                    scrollY: 0
+                },
+                jsPDF:        { unit: 'in', format: 'a2', orientation: 'landscape' },
+                pagebreak:    { mode: 'avoid-all' }
+            };
+
+            // Temporarily hide UI elements for clean PDF
+            const selects = document.querySelectorAll('select.input-field');
+            const headerActions = document.querySelector('.header-actions');
+            const chatFab = document.getElementById('open-chat');
+            const chatWidget = document.getElementById('chatbot-widget');
+            const loadingOverlay = document.getElementById('loading-overlay');
+            
+            selects.forEach(s => s.style.display = 'none');
+            if(headerActions) headerActions.style.display = 'none';
+            if(chatFab) chatFab.style.display = 'none';
+            if(chatWidget) chatWidget.style.display = 'none';
+            if(loadingOverlay) loadingOverlay.style.display = 'none';
+            
+            // Generate PDF
+            html2pdf().set(opt).from(element).save().then(() => {
+                // Restore elements
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.disabled = false;
+                
+                selects.forEach(s => s.style.display = '');
+                if(headerActions) headerActions.style.display = '';
+                if(chatFab) chatFab.style.display = '';
+                if(loadingOverlay) {
+                    // Only restore if it was actually hidden by us (not if it's naturally hidden after load)
+                    loadingOverlay.style.display = '';
+                    if (!currentData) {
+                        loadingOverlay.classList.remove('hidden');
+                    } else {
+                        loadingOverlay.classList.add('hidden');
+                    }
+                }
+            }).catch(err => {
+                console.error('PDF Generation Error:', err);
+                alert('Failed to generate PDF report.');
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.disabled = false;
+                selects.forEach(s => s.style.display = '');
+                if(headerActions) headerActions.style.display = '';
+                if(chatFab) chatFab.style.display = '';
+            });
+        });
+    }
 }
 
 /**
@@ -655,7 +761,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const div = document.createElement('div');
         div.className = `message ${sender}-message`;
         if(id) div.id = id;
-        div.textContent = text;
+
+        if (sender === 'bot') {
+            try {
+                // Remove Markdown wrapping if Gemini specifically returns raw JSON blocks (unusual but possible)
+                if(text.startsWith("```json")) text = text.replace(/```json/g, "").replace(/```/g,"");
+                
+                // Parse correctly using marked for bold properties to show up properly
+                div.innerHTML = typeof marked !== 'undefined' ? marked.parse(text) : text.replace(/\n/g, '<br>');
+            } catch (e) {
+                div.innerHTML = text.replace(/\n/g, '<br>');
+            }
+            
+            // Apply lightweight typography styling for embedded markdown rendering
+            const paras = div.querySelectorAll("p");
+            paras.forEach(p => p.style.margin = "0 0 0.5rem 0");
+            const lists = div.querySelectorAll("ul, ol");
+            lists.forEach(l => {
+                l.style.margin = "0.5rem 0";
+                l.style.paddingLeft = "1.5rem";
+            });
+        } else {
+            div.textContent = text;
+        }
+
         chatBody.appendChild(div);
         chatBody.scrollTop = chatBody.scrollHeight;
     }

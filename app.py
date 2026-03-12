@@ -258,11 +258,6 @@ def chat():
         user_message = data.get('message', '')
         context_data = data.get('context', {})
         
-        if not api_key:
-            return jsonify({
-                'response': "Hello! I am the AI Assistant. Currently, my advanced chat features are unavailable because the API key is not configured. However, you can still use the Dashboard and Predictions, which will automatically fall back to our local Machine Learning model!"
-            })
-
         # Prepare a context-aware prompt using dashboard stats
         prompt = f"""
 You are an expert epidemiological data analyst assistant integrated into the "Global Health Monitor" dashboard.
@@ -279,13 +274,30 @@ User Question: {user_message}
 Provide a concise, helpful, and analytical response. Format your response in plain text or simple markdown.
         """
         
-        response = gemini_model.generate_content(prompt)
-        
-        return jsonify({
-            'response': response.text
-        })
+        # If API Key is present, try to use it
+        if api_key:
+            try:
+                response = gemini_model.generate_content(prompt)
+                return jsonify({'response': response.text})
+            except Exception as e:
+                return jsonify({'response': f"The AI Chatbot encountered an error: {str(e)}. Please check your API settings."})
+        else:
+            # Fallback offline response when no API key is available
+            offline_response = f"""
+**Offline Analytics Assistant:**
+I am currently operating in offline mode. However, I can still observe the following from your dashboard:
+
+- **Total Cases:** {context_data.get('total_cases', 'Unknown')}
+- **Active Regions:** {context_data.get('active_regions', 'Unknown')}
+- **Tracked Diseases:** {context_data.get('tracked_diseases', 'Unknown')}
+- **Average Daily Cases:** {context_data.get('avg_daily_cases', 'Unknown')}
+
+Your question was: "{user_message}"
+"""
+            return jsonify({'response': offline_response})
+
     except Exception as e:
-        return jsonify({'response': f"The AI Chatbot encountered an error: {str(e)}. Please check your API settings."})
+        return jsonify({'response': f"Error: {str(e)}"})
 
 if __name__ == '__main__':
     print("\n" + "="*60)

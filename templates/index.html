@@ -1,22 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Advanced disease analysis and forecasting platform using machine learning for public health insights">
+    <meta name="description"
+        content="Advanced disease analysis and forecasting platform using machine learning for public health insights">
     <title>Global Health Monitor - Disease Analysis & Forecasting</title>
-    
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
+    <!-- html2pdf.js for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- Marked.js for rendering markdown in chatbot -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
+
 <body>
     <!-- Header -->
     <header class="header">
@@ -24,7 +34,7 @@
             <div class="logo">
                 <div class="logo-icon">🏥</div>
                 <div class="logo-text">
-                    <h1>Global Health Monitor</h1>
+                    <h1>REGIONAL DISEASE PREDICTION ANALYSIS</h1>
                     <p>AI-Powered Disease Analytics</p>
                 </div>
             </div>
@@ -51,6 +61,11 @@
                     </div>
                 </div>
             </div>
+            <div class="header-actions" style="margin-top: 15px; text-align: right;">
+                <button id="download-pdf-btn" class="btn-primary" style="padding: 0.5rem 1rem;">
+                    <span class="btn-icon">📄</span> Download PDF Report
+                </button>
+            </div>
         </div>
     </header>
 
@@ -61,7 +76,12 @@
             <div class="glass-card large">
                 <div class="card-header">
                     <h2>📈 Global Disease Trends (Last 90 Days)</h2>
-                    <div class="card-actions">
+                    <div class="card-actions" style="display: flex; align-items: center; gap: 10px;">
+                        <select id="trend-chart-type" class="input-field"
+                            style="padding: 0.2rem 0.5rem; width: auto; font-size: 0.85rem;">
+                            <option value="line" selected>Line</option>
+                            <option value="bar">Bar</option>
+                        </select>
                         <button class="btn-icon" id="refresh-data" title="Refresh Data">🔄</button>
                     </div>
                 </div>
@@ -74,17 +94,31 @@
         <!-- Section 2: Regional & Disease Distribution -->
         <section class="section-distribution">
             <div class="glass-card">
-                <div class="card-header">
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                     <h2>🌍 Regional Distribution</h2>
+                    <select id="regional-chart-type" class="input-field"
+                        style="padding: 0.2rem 0.5rem; width: auto; font-size: 0.85rem;">
+                        <option value="bar" selected>Bar</option>
+                        <option value="pie">Pie</option>
+                        <option value="doughnut">Doughnut</option>
+                        <option value="line">Line</option>
+                    </select>
                 </div>
                 <div class="card-body">
                     <canvas id="regional-chart"></canvas>
                 </div>
             </div>
-            
+
             <div class="glass-card">
-                <div class="card-header">
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                     <h2>🦠 Disease Distribution</h2>
+                    <select id="disease-chart-type" class="input-field"
+                        style="padding: 0.2rem 0.5rem; width: auto; font-size: 0.85rem;">
+                        <option value="doughnut" selected>Doughnut</option>
+                        <option value="pie">Pie</option>
+                        <option value="bar">Bar</option>
+                        <option value="line">Line</option>
+                    </select>
                 </div>
                 <div class="card-body">
                     <canvas id="disease-chart"></canvas>
@@ -114,7 +148,7 @@
                                 <option value="Southeast Asia">Southeast Asia</option>
                             </select>
                         </div>
-                        
+
                         <div class="control-group">
                             <label for="pred-disease">Disease</label>
                             <select id="pred-disease" class="input-field">
@@ -128,22 +162,25 @@
                                 <option value="Typhoid">Typhoid</option>
                             </select>
                         </div>
-                        
+
                         <div class="control-group">
                             <label for="pred-temp">Temperature (°C)</label>
-                            <input type="number" id="pred-temp" class="input-field" value="28" min="0" max="50" step="0.5">
+                            <input type="number" id="pred-temp" class="input-field" value="28" min="0" max="50"
+                                step="0.5">
                         </div>
-                        
+
                         <div class="control-group">
                             <label for="pred-rain">Rainfall (mm)</label>
-                            <input type="number" id="pred-rain" class="input-field" value="150" min="0" max="500" step="10">
+                            <input type="number" id="pred-rain" class="input-field" value="150" min="0" max="500"
+                                step="10">
                         </div>
-                        
+
                         <div class="control-group">
                             <label for="pred-humidity">Humidity (%)</label>
-                            <input type="number" id="pred-humidity" class="input-field" value="70" min="0" max="100" step="5">
+                            <input type="number" id="pred-humidity" class="input-field" value="70" min="0" max="100"
+                                step="5">
                         </div>
-                        
+
                         <div class="control-group">
                             <label for="pred-density">Population Density</label>
                             <select id="pred-density" class="input-field">
@@ -156,12 +193,13 @@
                                 <option value="5000">Megacity (5000/km²)</option>
                             </select>
                         </div>
-                        
+
                         <div class="control-group">
                             <label for="pred-days">Forecast Days</label>
-                            <input type="number" id="pred-days" class="input-field" value="30" min="7" max="90" step="1">
+                            <input type="number" id="pred-days" class="input-field" value="30" min="7" max="90"
+                                step="1">
                         </div>
-                        
+
                         <div class="control-group full-width">
                             <button id="predict-btn" class="btn-primary">
                                 <span class="btn-icon">🚀</span>
@@ -169,7 +207,7 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <div class="prediction-result" id="prediction-result" style="display: none;">
                         <h3>Forecast Results</h3>
                         <canvas id="prediction-chart"></canvas>
@@ -182,8 +220,13 @@
         <!-- Section 4: Disease Timeline -->
         <section class="section-timeline">
             <div class="glass-card large">
-                <div class="card-header">
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                     <h2>📅 Disease Timeline (Last 30 Days)</h2>
+                    <select id="timeline-chart-type" class="input-field"
+                        style="padding: 0.2rem 0.5rem; width: auto; font-size: 0.85rem;">
+                        <option value="line" selected>Line</option>
+                        <option value="bar">Bar</option>
+                    </select>
                 </div>
                 <div class="card-body">
                     <canvas id="timeline-chart"></canvas>
@@ -225,4 +268,5 @@
     <!-- Custom JavaScript -->
     <script src="/static/js/main.js"></script>
 </body>
+
 </html>
