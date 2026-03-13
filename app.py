@@ -10,24 +10,22 @@ from datetime import datetime, timedelta
 from ml_engine import DiseaseForecaster
 import os
 import json
-import google.generativeai as genai
+from google import genai
 
 # Configure Gemini API
 api_key = os.environ.get("GEMINI_API_KEY")
 if not api_key:
     print("⚠ GEMINI_API_KEY environment variable not set. Gemini features will not work.")
-genai.configure(api_key=api_key)
+    client = None
+else:
+    client = genai.Client(api_key=api_key)
+
 generation_config = {
-  "temperature": 0.7,
-  "top_p": 0.95,
-  "top_k": 40,
-  "max_output_tokens": 8192,
-  "response_mime_type": "application/json",
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 40,
+    "max_output_tokens": 8192,
 }
-gemini_model = genai.GenerativeModel(
-  model_name="gemini-2.5-flash",
-  generation_config=generation_config,
-)
 
 app = Flask(__name__)
 CORS(app)
@@ -275,9 +273,13 @@ Provide a concise, helpful, and analytical response. Format your response in pla
         """
         
         # If API Key is present, try to use it
-        if api_key:
+        if api_key and client:
             try:
-                response = gemini_model.generate_content(prompt)
+                response = client.models.generate_content(
+                    model="gemini-1.5-flash",
+                    contents=prompt,
+                    config=generation_config
+                )
                 return jsonify({'response': response.text})
             except Exception as e:
                 return jsonify({'response': f"The AI Chatbot encountered an error: {str(e)}. Please check your API settings."})
