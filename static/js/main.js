@@ -3,6 +3,14 @@
  * Handles data fetching, chart rendering, and user interactions
  */
 
+import { 
+    auth, 
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword, 
+    signOut, 
+    onAuthStateChanged 
+} from './firebase-auth.js';
+
 // Global state
 let charts = {};
 let currentData = null;
@@ -15,7 +23,6 @@ Chart.defaults.font.family = 'Inter, sans-serif';
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🏥 Global Health Monitor initialized');
-    loadDashboardData();
     setupEventListeners();
 });
 
@@ -656,6 +663,108 @@ function setupEventListeners() {
             });
         });
     }
+    
+    // Auth Listeners
+    setupAuthListeners();
+}
+
+/**
+ * Setup Firebase Auth listeners and UI interactions
+ */
+function setupAuthListeners() {
+    const authView = document.getElementById('auth-view');
+    const dashboardView = document.getElementById('dashboard-view');
+    const authForm = document.getElementById('auth-form');
+    const toggleAuthLink = document.getElementById('toggle-auth');
+    const logoutBtn = document.getElementById('logout-btn');
+    
+    let isRegisterMode = false;
+
+    // Toggle Login/Register
+    toggleAuthLink?.addEventListener('click', (e) => {
+        e.preventDefault();
+        isRegisterMode = !isRegisterMode;
+        
+        document.getElementById('modal-title').textContent = isRegisterMode ? 'Create Account' : 'Login';
+        document.getElementById('auth-submit').textContent = isRegisterMode ? 'Register' : 'Login';
+        document.getElementById('toggle-text').textContent = isRegisterMode ? 'Already have an account?' : "Don't have an account?";
+        toggleAuthLink.textContent = isRegisterMode ? 'Login' : 'Register';
+        document.getElementById('auth-error').style.display = 'none';
+    });
+
+    // Form Submission
+    authForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('auth-email').value;
+        const password = document.getElementById('auth-password').value;
+        const errorDiv = document.getElementById('auth-error');
+        const submitBtn = document.getElementById('auth-submit');
+        
+        errorDiv.style.display = 'none';
+        submitBtn.disabled = true;
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Processing...';
+
+        try {
+            if (isRegisterMode) {
+                await createUserWithEmailAndPassword(auth, email, password);
+                console.log('✓ Account created');
+            } else {
+                await signInWithEmailAndPassword(auth, email, password);
+                console.log('✓ Signed in');
+            }
+            resetAuthForm();
+        } catch (error) {
+            console.error('Auth Error:', error);
+            errorDiv.textContent = error.message.replace('Firebase: ', '');
+            errorDiv.style.display = 'block';
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    });
+
+    // Logout
+    logoutBtn?.addEventListener('click', async () => {
+        try {
+            await signOut(auth);
+            console.log('✓ Signed out');
+            // Force reload to clear state and show login
+            window.location.reload();
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    });
+
+    // Auth State Observer
+    onAuthStateChanged(auth, (user) => {
+        const userEmail = document.getElementById('user-email');
+
+        if (user) {
+            // User is signed in
+            authView.style.display = 'none';
+            dashboardView.style.display = 'block';
+            userEmail.textContent = user.email;
+            console.log(`User logged in: ${user.email}`);
+            
+            // Only load data if not already loaded
+            if (!currentData) {
+                loadDashboardData();
+            }
+        } else {
+            // User is signed out
+            authView.style.display = 'flex';
+            dashboardView.style.display = 'none';
+            console.log('User logged out');
+            showLoading(false); // Ensure loading is hidden
+        }
+    });
+
+    function resetAuthForm() {
+        authForm.reset();
+        document.getElementById('auth-error').style.display = 'none';
+        isRegisterMode = false;
+    }
 }
 
 /**
@@ -666,9 +775,7 @@ function showLoading(show) {
     if (show) {
         overlay.classList.remove('hidden');
     } else {
-        setTimeout(() => {
-            overlay.classList.add('hidden');
-        }, 500);
+        overlay.classList.add('hidden');
     }
 }
 
